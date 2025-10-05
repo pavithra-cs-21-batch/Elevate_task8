@@ -1,0 +1,76 @@
+Task 8: Stored Procedures and Functions
+1. Stored Procedure – Insert New Booking
+ This procedure adds a new booking entry and updates slot status to “Occupied”.
+
+DELIMITER $$
+
+CREATE PROCEDURE AddNewBooking(
+    IN p_VehicleID INT,
+    IN p_SlotID INT,
+    IN p_StartTime DATETIME,
+    IN p_EndTime DATETIME
+)
+BEGIN
+    -- Insert booking record
+    INSERT INTO Booking (VehicleID, SlotID, StartTime, EndTime, Status, PaymentStatus)
+    VALUES (p_VehicleID, p_SlotID, p_StartTime, p_EndTime, 'Active', 'Pending');
+
+    -- Update slot status
+    UPDATE ParkingSlot
+    SET Status = 'Occupied'
+    WHERE SlotID = p_SlotID;
+END$$
+
+DELIMITER ;
+
+To execute:
+CALL AddNewBooking(1, 1, '2025-10-06 09:00:00', '2025-10-06 11:00:00');
+
+2. Stored Function – Calculate Total Payment by Vehicle
+ This function returns the total amount paid by a specific vehicle.
+
+DELIMITER $$
+
+CREATE FUNCTION GetTotalPaymentByVehicle(p_VehicleID INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total DECIMAL(10,2);
+
+    SELECT SUM(P.Amount)
+    INTO total
+    FROM Payment P
+    INNER JOIN Booking B ON P.BookingID = B.BookingID
+    WHERE B.VehicleID = p_VehicleID;
+
+    RETURN IFNULL(total, 0);
+END$$
+
+DELIMITER ;
+
+To execute:
+SELECT GetTotalPaymentByVehicle(1) AS TotalPaidByVehicle1;
+
+3. Bonus Example – Stored Procedure for Payment Entry
+
+DELIMITER $$
+
+CREATE PROCEDURE AddPayment(
+    IN p_BookingID INT,
+    IN p_Amount DECIMAL(10,2),
+    IN p_Mode VARCHAR(50)
+)
+BEGIN
+    INSERT INTO Payment (BookingID, Amount, PaymentMode, PaymentDate)
+    VALUES (p_BookingID, p_Amount, p_Mode, NOW());
+
+    UPDATE Booking
+    SET PaymentStatus = 'Paid'
+    WHERE BookingID = p_BookingID;
+END$$
+
+DELIMITER ;
+
+To execute:
+CALL AddPayment(2, 75.00, 'UPI');
+
